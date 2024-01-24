@@ -10,160 +10,79 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id       String  @id @default(cuid())
-  email    String  @unique
-  username String  @unique
-  name     String?
+model Area {
+  id   Int    @id @default(autoincrement())
+  name String @unique
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  image       UserImage?
-  password    Password?
-  notes       Note[]
-  roles       Role[]
-  sessions    Session[]
-  connections Connection[]
+  subareas SubArea[]
 }
 
-model Note {
-  id      String @id @default(cuid())
-  title   String
-  content String
+model SubArea {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+  area Area   @relation(fields: [areaId], references: [id])
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  ownerId String
-
-  images NoteImage[]
-
-  // non-unique foreign key
-  @@index([ownerId])
-  // This helps our order by in the user search a LOT
-  @@index([ownerId, updatedAt])
+  areaId Int
+  routes Route[]
 }
 
-model NoteImage {
-  id          String  @id @default(cuid())
-  altText     String?
-  contentType String
-  blob        Bytes
+model Route {
+  id   Int    @id @default(autoincrement())
+  num  String
+  name String @unique
+  rank String @unique
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  grade       String
+  isSport     Boolean
+  height      Int?
+  firstAscent String?
+  faDate      DateTime?
+  description String?
+  safety      String // green | yellow | red
+  note        String?
+  boltIndexes String?
 
-  note   Note   @relation(fields: [noteId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  noteId String
+  subArea   SubArea @relation(fields: [subAreaId], references: [id])
+  subAreaId Int
 
-  // non-unique foreign key
-  @@index([noteId])
+  bolts Bolt[]
 }
 
-model UserImage {
-  id          String  @id @default(cuid())
-  altText     String?
-  contentType String
-  blob        Bytes
+model Bolt {
+  id     Int    @id @default(autoincrement())
+  model  String
+  anchor String // no | left | right
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  userId String @unique
+  routes Route[]
+  gears  Gear[]
 }
 
-model Password {
-  hash String
+model Gear {
+  id        Int       @id @default(autoincrement())
+  type      String
+  material  String
+  setupDate DateTime?
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  userId String @unique
+  bolt   Bolt? @relation(fields: [boltId], references: [id])
+  boltId Int?
 }
 
-model Session {
-  id             String   @id @default(cuid())
-  expirationDate DateTime
+model Work {
+  id        Int      @id @default(autoincrement())
+  date      DateTime
+  type      String // setup | test | remove
+  condition String
+  isPass    Boolean
+  note      String?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  userId String
-
-  // non-unique foreign key
-  @@index([userId])
+  workers Worker[]
 }
 
-model Permission {
-  id          String @id @default(cuid())
-  action      String // e.g. create, read, update, delete
-  entity      String // e.g. note, user, etc.
-  access      String // e.g. own or any
-  description String @default("")
+model Worker {
+  id   Int    @id @default(autoincrement())
+  name String
+  role String // operator | assistant
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  roles Role[]
-
-  @@unique([action, entity, access])
-}
-
-model Role {
-  id          String @id @default(cuid())
-  name        String @unique
-  description String @default("")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  users       User[]
-  permissions Permission[]
-}
-
-model Verification {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-
-  /// The type of verification, e.g. "email" or "phone"
-  type String
-
-  /// The thing we're trying to verify, e.g. a user's email or phone number
-  target String
-
-  /// The secret key used to generate the otp
-  secret String
-
-  /// The algorithm used to generate the otp
-  algorithm String
-
-  /// The number of digits in the otp
-  digits Int
-
-  /// The number of seconds the otp is valid for
-  period Int
-
-  /// The valid characters for the otp
-  charSet String
-
-  /// When it's safe to delete this verification
-  expiresAt DateTime?
-
-  @@unique([target, type])
-}
-
-model Connection {
-  id           String @id @default(cuid())
-  providerName String
-  providerId   String
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  userId String
-
-  @@unique([providerName, providerId])
+  work   Work @relation(fields: [workId], references: [id])
+  workId Int
 }
